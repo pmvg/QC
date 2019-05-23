@@ -2,7 +2,7 @@
 Quality Control tests for meteorologic datasets recovered.
 
 qc.test information:
-Description
+
 This function test daily sunset values to max daily value that could take and optionally test with mean or sum according to case applied.
 In some publications papers, after a certain date and in some places, sunshine hours start to be designated by "insolation".
 Diference between both is in units, ie. sunshine hours its in hour.minuts units and insolation in hours units.
