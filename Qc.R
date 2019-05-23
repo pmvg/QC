@@ -269,15 +269,12 @@ if (choice != TRUE) {
   assign("lat", lat, envir = globalenv())
   assign("long", long, envir = globalenv())
   assign("alt", alt, envir = globalenv())
-  cat("lat  <-",lat, file="QC_info.txt", fill = TRUE, append = TRUE)
-  cat("long <-",long, file="QC_info.txt", fill = TRUE, append = TRUE)
-  cat("alt  <-",alt, file="QC_info.txt", fill = TRUE, append = TRUE)
   # data_error  
   data_error <- readline("Introduce data error value:  ")
   if (nchar(data_error) == 0) {
     writeLines("No data error defined, default in place!!")
     cat("No data error defined, default in place!!",file="log.txt",append = TRUE)
-    data_error <- NA}
+    data_error <- -99.9}
   cat("data_error <-",data_error, file="QC_info.txt", fill = TRUE, append = TRUE)
   # varcod, if variable has a code use it, becomes necessary if data file have multiple variables
   varcod <- readline("Introduce variable code (no code put -999): ")
@@ -501,7 +498,7 @@ if (vname == "sshm" | vname == "ss") {
           if (choice) {
             dec_val <- (data_val$Value[i]-floor(data_val$Value[i]))/0.6
             data_old <- data_val$Value[i]
-            data_val$Value[i] <- floor(data_val$Value[i]) + dec_val
+            data_val$Value[i] <- round(floor(data_val$Value[i]) + dec_val, digits = 1)
             Meta[i] <- paste("Orig=",data_old, sep = "")
           } else {writeLines("No conversion by user choice. Continue testing...")}
         }
@@ -509,7 +506,7 @@ if (vname == "sshm" | vname == "ss") {
         if (vname == "sshm") {
           dec_val <- dec_val/0.6
           data_old <- data_val$Value[i]
-          data_val$Value[i] <- floor(data_val$Value[i]) + dec_val
+          data_val$Value[i] <- round(floor(data_val$Value[i]) + dec_val, digits = 1)
           Meta[i] <- paste("Orig=",data_old, sep = "")}
       }
     }
@@ -535,20 +532,24 @@ if (vname == "sshm" | vname == "ss"){
       assign("long", long, envir = globalenv())
       assign("alt", alt, envir = globalenv())}
     max_day[i] <- day.duration(data_val$Year[i],data_val$Month[i],data_val$Day[i])
+    max_day[i] <- round(max_day[i],digits = 1)
     if (is.na(data_val$Value[i])) {
       writeLines("Error value found...")
       cat("Year:",data_val$Year[i],"Month:",data_val$Month[i],"day:",data_val$Day[i], sep = " ", fill = TRUE)      
     } else {
-      if (data_val$Value[i] > max_day[i] + 0.1){
+      if (data_val$Value[i] > max_day[i]){
         cat("Year:",data_val$Year[i],"Month:",data_val$Month[i],"day:",data_val$Day[i], sep = " ", fill = TRUE)
-        cat("max sunshine hours:",format(max_day[i], digits = 4), sep = " ", fill = TRUE)
-        cat("    sunshine hours:",format(data_val$Value[i], digits = 4), sep = " ", fill = TRUE)
+        cat("max sunshine hours:",max_day[i], sep = " ", fill = TRUE)
+        cat("    sunshine hours:",data_val$Value[i], sep = " ", fill = TRUE)
         cat("Year:",data_val$Year[i],"Month:",data_val$Month[i],"day:",data_val$Day[i],"Flag raised: max_sunshine", file = "log.txt", sep = " ", fill = TRUE, append = TRUE)
         if (is.na(Meta[i])) {Meta[i] <- "max"} else {Meta[i] <- paste(Meta[i],"max", sep = ",")}}
     }
   }
   assign("max_day", max_day, envir = globalenv())
 }
+cat("lat  <-",lat, file="QC_info.txt", fill = TRUE, append = TRUE)
+cat("long <-",long, file="QC_info.txt", fill = TRUE, append = TRUE)
+cat("alt  <-",alt, file="QC_info.txt", fill = TRUE, append = TRUE)
 #
 #  Comparation with mean values
 if (meanchk) {
@@ -566,18 +567,18 @@ if (meanchk) {
         cat("Year",i,"and Month",j,"dont exist...", sep = " ",fill = TRUE)
         cat("Year",i,"and Month",j,"dont exist...",file = "log.txt", sep = " ",fill = TRUE)
       } else {
-        data_val_sum <- sum(data_val_sub$Value, na.rm = TRUE) 
+        data_val_sum <- round(sum(data_val_sub$Value, na.rm = TRUE),digits = 2) 
         data_sum_sum <- data_sum$Value[data_sum$Year == i & data_sum$Month == j]
         if (vname == "sshm") {
           dec_val <- (data_sum_sum - floor(data_sum_sum))/0.6  
           data_sum_s <- floor(data_sum_sum) + dec_val
-          data_sum_sum <- data_sum_s}
-        dif_val <- abs(data_val_sum - data_sum_sum)
+          data_sum_sum <- round(data_sum_s,digits = 2)}
+        dif_val <- round(abs(data_val_sum - data_sum_sum),digits = 2)
         if (dif_val >= 0.1){
           cat("Sum: Year:",i,"Month:",j, sep = " ", fill = TRUE)
-          cat("sunshine hours publish    :",format(data_sum_sum, digits = 4), sep = " ", fill = TRUE)
-          cat("sunshine hours calculated :",format(data_val_sum, digits = 4), sep = " ", fill = TRUE)
-          cat("Diference                 :",format(dif_val, digits = 4), sep = " ", fill = TRUE)
+          cat("sunshine hours publish    :",data_sum_sum, sep = " ", fill = TRUE)
+          cat("sunshine hours calculated :",data_val_sum, sep = " ", fill = TRUE)
+          cat("Diference                 :",dif_val, sep = " ", fill = TRUE)
           cat("Year:",i,"Month:",j,"Flag raised: mean_sunshine", file = "log.txt", sep = " ", fill = TRUE, append = TRUE)
           for (k in 1:data_len) {
             if (data_val$Year[k] == i & data_val$Month[k] == j) {
@@ -594,18 +595,22 @@ if (meanchk) {
 writeLines("PART 6: Write to files")
 #
 #
+sefFmt <- FALSE
 if (fileFmt != "SEF"){
   choice <- askYesNo("Write in SEF format?", default = "FALSE")
   if (choice == TRUE){
+    sefFmt <- TRUE
     opts <- c("SEF","ID","Name","Lat","Lon","Alt","Source","Link","Vbl","Stat","Units","Meta")
     val  <- c("0.2.0","","","","","","","","","","","")
     data_meta <- data.frame(opts,val,stringsAsFactors = FALSE)
-    data_meta$opts[data_meta$opts == "Lat"] <- lat
-    data_meta$opts[data_meta$opts == "Lon"] <- long
-    data_meta$opts[data_meta$opts == "Alt"] <- alt
-    data_meta$opts[data_meta$opts == "Vbl"] <- vname
-    if (vname == "sshm"){data_meta$opts[data_meta$opts == "Vbl"] <- "ss"} 
-    data_meta$opts[data_meta$opts == "Units"] <- "hours"
+    if (fileFmt == "ERACLIM"){data_meta$val[data_meta$opts == "ID"] <- data_val$Uniq_rec_ID[1]}
+    data_meta$val[data_meta$opts == "Name"] <- readline("Station Name?  ")
+    data_meta$val[data_meta$opts == "Lat"]  <- lat
+    data_meta$val[data_meta$opts == "Lon"]  <- long
+    data_meta$val[data_meta$opts == "Alt"]  <- alt
+    data_meta$val[data_meta$opts == "Vbl"]  <- vname
+    if (vname == "sshm"){data_meta$val[data_meta$opts == "Vbl"] <- "ss"} 
+    data_meta$val[data_meta$opts == "Units"] <- "hours"
     assign("data_meta",data_meta,envir = globalenv())
     Year   <- data_val$Year
     Month  <- data_val$Month
@@ -614,11 +619,13 @@ if (fileFmt != "SEF"){
     Hour   <- c()
     Minute <- c()
     for (i in 1:data_len){
-      Period[i] <- " "     
       Hour[i]   <- substr(data_val$Hour[i], start= 1, stop = 2)
       Minute[i] <- substr(data_val$Hour[i], start= 3, stop = 4)
+      Period[i] <- " " 
     }
-    Value  <- data_val$Value
+    Value  <- round(data_val$Value,digits = 1)
+    data_val <- data.frame(Year,Month,Day,Hour,Minute,Period,Value,stringsAsFactors = FALSE)
+    assign("data_val",data_val,envir = globalenv())
   }  
 }
 writeLines("Default output file: file_out.txt")
@@ -629,51 +636,42 @@ if (choice){file_out <- file.choose()} else {
     writeLines("File out already exists. Old file will be renamed to file_out_old.txt")
     file.rename("file_out.txt", "file_out_old.txt")}
 }
-options(digits = 1)
-if (exists("data_full")) {rm("data_full")}
+for (i in 1:data_len){
+
+}
+if (exists("data_print")) {rm("data_print")}
 if ("Meta" %in% colnames(data_val)) {
   writeLines("Meta column present, update new information...")
   for (i in 1:data_len) {
     if (is.na(data_val$Meta[i])) {data_val$Meta[i] <- Meta[i]} else {data_val$Meta[i] <- paste(data_val$Meta[i],Meta[i], sep = ",")}   
   }
-  data_full <- data_val
-  for (i in 1:data_len) {if (is.na(data_full$Meta[i])) {data_full$Meta[i] <- ""}}  
+  data_print <- data_val
 } else {
   writeLines("Meta column not present, add information...")
-  data_full <- cbind(data_val,Meta, stringsAsFactors = FALSE)
-  for (i in 1:data_len) {if (is.na(data_full$Meta[i])) {data_full$Meta[i] <- ""}}
+  data_print <- cbind(data_val,Meta, stringsAsFactors = FALSE)
 }
-if (fileFmt == "SEF") {
-  write.table (data_meta, file = file_out, sep = " \t", quote = FALSE, row.names = FALSE, col.names = FALSE)  
+for (i in 1:data_len) {
+  if (is.na(data_print$Value[i])){data_print$Value[i] <- data_error} 
+  if (is.na(data_print$Meta[i])){data_print$Meta[i] <- ""}
 }
-data_full$Value <- format(data_full$Value,digits = 1)
-data_print <- data_full
-#data_print <- format(data_full, digits = 2)
-#print(data_print, right = FALSE)
+if (fileFmt == "SEF" | sefFmt == TRUE) {
+  write.table (data_meta, file = file_out, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)  
+}
 write.table (data_print, file = file_out, append = TRUE, sep = "\t", quote = FALSE, row.names = FALSE, col.names = fileHead)
 #
 # PART 6: End
 #
 # End function
 #
-options(digits = 7)
 }
 #
 day.duration <- function(my_year,my_month,my_day) {
 #
+# define test values
 #my_year  <- 1977
 #my_month <- 1
 #my_day   <- 15
 #alt      <- 95.0
-#
-#  print(my_year)
-#  print(my_month)
-#  print(my_day)
-#  writeLines("Values need: ")
-#  value_label <- c("year","month","day","lat","long","alt")
-#  value_in    <- c(my_year,my_month,my_day,lat,long,alt)
-#  names(value_in) <- value_label
-#  print(value_in)
 #
 # Julian day number (of date user want)
 jdn1 <- (1461*(my_year+4800+(my_month-14)/12))/4
